@@ -1,0 +1,54 @@
+#include <asf.h>
+
+#define TWI_MASTER TWIC
+#define TWI_MASTER_PORT PORTC
+#define TWI_SLAVE_ADDR 0x60
+#define TWI_MASTER_ADDR 0x50
+#define TWI_SPEED 5000
+#define PATTERN_TEST_LENGTH sizeof(test_pattern)
+TWI_MASTER_t master;
+
+volatile uint8_t test_pattern[] = {
+	0x55,
+	0xA5,
+	//0x5A,
+	//0x77,
+	//0x99
+};
+// Initialize buffers to write received data
+
+volatile uint8_t rx_pattern[TWIS_SEND_BUFFER_SIZE] = {};
+volatile uint8_t m_rx_pattern[TWIS_SEND_BUFFER_SIZE] = {};
+	
+void twi_m_init( PORT_t M_PORT,TWI_t *module,twi_options_t *m_opt) {
+	uint8_t i=0;
+	// Set internal Pullups for SDA and SCL
+	
+	M_PORT.PIN0CTRL = PORT_OPC_WIREDANDPULL_gc;
+	M_PORT.PIN1CTRL = PORT_OPC_WIREDANDPULL_gc;
+	//Initialise Master
+	
+	sysclk_enable_peripheral_clock(module);
+	twi_master_init(module,m_opt);
+	twi_master_enable(module);
+}
+int main (void)
+{
+	sysclk_init();
+	board_init();
+	
+	uint8_t i=0;
+	
+// Prepare Packet to send
+twi_package_t packet_tx ={
+	.addr_length = 0 , // implies that no command will be sent
+	.chip =TWI_SLAVE_ADDR,
+	.buffer =(void*)test_pattern,
+	.length =PATTERN_TEST_LENGTH,
+	.no_wait=false // wait if bus is busy
+};
+twi_options_t m_options ={
+	.speed=TWI_SPEED,
+	.chip = TWI_MASTER_ADDR,
+	.speed_reg=TWI_BAUD(sysclk_get_cpu_hz(),TWI_SPEED)
+};
